@@ -1,0 +1,253 @@
+---
+title: "Sea Turtle Management"
+author: "Vanessa Rathbone"
+date: "3/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(mpmtools)
+library(popbio)
+library(tidyverse)
+
+```
+
+## Construct the model
+```{r}
+
+# In this analysis we will assume that the stage durations are fixed: for example, individuals are small juveniles by their first birthday, and become large juveniles at age 8. So the population could be represented by a Leslie matrix model.
+# The primary potential targets of management are to (a) reduce threats to eggs and hatchlings on the beach (which will increase the “egg” survival in the model); or (b) implement TEDs to reduce fisheries bycatch (which will increase survival of large juveniles, subadults, and adults).
+
+# Pull in stage-specific survival and birth rates
+# Life table model shows mortality and fertility of an individual as a function of age.
+loggerhead[[2]]
+
+# Look at stage duration Leslie matrix model for all life stages survival and reproduction rates
+make_stage4age_matrix(loggerhead[[2]])
+
+# Save the matrix
+logger_leslie <- make_stage4age_matrix(loggerhead[[2]])
+
+```
+
+*1. Is this a pre-breeding-census model or a post-breeding-census model? How can you tell?*
+
+This is a post-breeding model because after age subadult21 the probability of surviving as an adults and beyond is 0.80910. A pre-breeding model wouldn't necessarily include this stage in their model depending on how we define the age parameter. Added one more survival term to represent the last, indefinite stage is represented. 
+
+*2. Subadults have a maternity of zero. Why do some subadults in the model have a non-zero value in the top row of the matrix? What does this represent?*
+
+The non-zero value in the top row of the matrix represents the reproductive rate and are only seen in the subadult21 and adult22 stages. This is likely representing that the last stage of being a subadult may have reproductive capacities as they reach their full reproductive adult stage. This also represents only reproduction which happens in an instant in a year time-scale and therefore, the 56.80125 accounts for reproduction that may occur between the last sub adult age and the adult age. 
+
+*3. Why is the transition from 21-year-old subadults to eggs different from the transition from adults to eggs? Why do both differ from the maternity value?*
+
+They differ because the 21-year-old subadults have a lower probability of reproduction than the 22-year-old adults who are at the full reproductive stage. The adult22 value differs from the maternity value because it's only looking at the reproduction in relation to the stages before. When the model runs to infinite adult stages the maternity or reproductive rate grows and becomes 76.5. 
+
+```{r}
+
+# Use the lambda1() function to calculate the asymptotic growth rate of the population
+lambda1(logger_leslie)
+
+```
+
+
+*4.What does this tell you about the status of the population under the conditions before TEDs were implemented?*
+
+The asymptotic growth rate of the population is `r round lambda1(logger_leslie),1` or ~0.95. If lambda = 1, the population isn't changing. Because lambda is less than one, the population is in trouble and not in a stable state. 
+
+```{r}
+
+# Us the “asymptotic age structure” (AAS) approximation to approximate the Leslie matrix model into a stage-structured matrix that includes the asymptotic growth rate, the stable stage structure, and the sensitivities.
+make_stage4age_matrix(loggerhead[[2]], approx_method = c("AAS"))
+
+logger_aas <- make_stage4age_matrix(loggerhead[[2]], approx_method = c("AAS"))
+
+```
+
+*5. Why does the transition from subadults to eggs have a different value than it did in the Leslie matrix?*
+
+Because this is an approximation that includes asymptotic growth rates, stable stage structures, and sensitivities the value from subadult to eggs has a different value. This model includes the small reproduction value of 4.66 for subadults because the census is only taken once per year and this value accounts for the subadults that will become reproducing adults from one census to the next year's census. 
+
+## Stable stage distribution
+```{r}
+
+# Calculate the stable stage distribution of the stage structured model using stable_stage()
+# Stable age distribution using Leslie matrix
+stable_stage(logger_leslie)
+
+# Now look at the stage distribution using the AAS
+stable_stage(logger_aas)
+
+stable_stage(logger_aas, collapse = TRUE)
+
+logger_stable <-stable_stage(logger_aas, collapse = TRUE)
+
+# If you run stable_stage() on the Leslie matrix, you actually get the stable age distribution (try it and see). So what do I mean when I say that the AAS model gives the same stable stage structure as the Leslie matrix. Well, if you were to sum up the elements of the stable age distribution that correspond to “small juvenile”, 2 then you would get the same value as the “small juvenile” component of the stable stage distribution in the AAS model. In a big matrix this summing is tedious; you can automate it using the collapse = TRUE argument to stable_stage(). 
+
+# Checking the difference between running stable_stage() with Leslie vs AAS models
+x <- 0.1691892096+0.1333506465+0.1051035995+0.0828399930+0.0652923827+0.0514618011+0.0405608872
+
+```
+
+*6. Which stage do you predict to be most abundant?*
+
+Based on the stable stage distribution, the small juveniles or stage 2 will be the most abundant at `r round, xyz` or 0.6478 whereas the adult stage only accounts for 0.3% of the total population. 
+
+## Increasing λ1 to greater than 1
+```{r}
+
+# Exploratory analysis
+# Adjust survival components
+make_stage4age_matrix(loggerhead[[2]], approx_method = c("AAS"))
+
+# Turn the matrix into a dataframe
+aas_matrix <- as.data.frame(make_stage4age_matrix(loggerhead[[2]], approx_method = c("AAS"))) %>% 
+  rename_all(funs(
+    str_replace_all(., c(
+      "eggs" = "E",
+      "small juviniles" = "SJ",
+      "large juveniles" = "LJ",
+      "subadults" = "SA",
+      "adults" = "A"
+    ))
+  ))
+
+## Egg/hatchling survival, lambda > 1 at 1.5 
+aas_matrix$E[2] 
+ 
+aas_matrix$E[2] <- 1.5 # Change values
+
+# Rerun to see how lambda changes
+lambda1(aas_matrix)
+
+## Adult survival, lambda > 1 at 0.93
+aas_matrix$A[5]
+
+aas_matrix$A[5] <- 0.93
+
+# Rerun to see how lambda changes
+lambda1(aas_matrix)
+
+
+
+```
+
+*7. Which element of the projection matrix represents egg/hatchling survival? Which represents adult survival?*
+
+The 0.6747 represents the egg/hatchling survival. The 0.80910 represents adult survival.
+
+*8. Increase the matrix element representing egg/hatchling survival, and re-calculate λ1. By how much does it increase? Experiment with different values of this term until you get an asymptotic growth rate of 1 or more. How large does egg survival need to be to achieve this?*
+
+For egg/hatchling survival, λ1 > 1 at 1.5.
+
+*9.Put the egg survival back to its original value, increase the matrix element representing adult survival, and re-calculate λ1. By how much does it increase? Experiment with different values of this term until you get an asymptotic growth rate of 1 or more. How large does adult survival need to be to achieve this?*
+
+For adult survival, λ1 > 1 at 0.93.
+
+*10. Based on this analysis, which life stage seems the more promising one to target management at? What else do you need to know to reach a final conclusion?*
+
+Based on this analysis, management should target the adult life stage. It only requires an increase from 0.80 to 0.93 for λ1 to be greater than one and therefore stable. Additionally, you might want to know what other stages might require less management to increase λ1 to be greater than one. 
+
+```{r}
+
+# Sensitivity and elasticity analysis of the matrix model
+
+# Mathematical sensitivity matrix
+# Sensitivity(logger_leslie) %>% 
+  round(3)
+
+sensitivity(logger_aas) %>% 
+  round(3)
+
+# Biological sensitivity matrix
+sensitivity(logger_aas, zero = TRUE) %>% 
+  round(3)
+
+# Elasticity matrix
+elasticity(logger_aas) %>% 
+  round(3)
+
+0.05/0.769
+
+```
+
+*11. Use the sensitivity() and elasticity() functions in in the popbio package to calculate the matrix sensitivities and elasticities. Show the results. What can you conclude based on this analysis?*
+
+In the interest of increasing λ1, our biggest response from the sensitivity model is to increase large juvenile survival, next would be to increase juvenile survival followed by increasing subadult survival. The smallest response would come from increasing reproduction of adults. The proportional change seen in the elasticity matrix shows that increasing survival of adults would have the largest increase of λ1. Because we need to increase λ1 by 0.05 to reach 1, 
+
+increase small juvenile survival by 0.05/0.082 = 0.6097561
+increase large juveniles survival by 0.05/1.174 = 0.04258944
+increase subadults survival 0.05/2.889 = 0.01730703
+increase adult survival 0.05/0.769 = 0.06501951
+
+Based on these sensitivity survival rates for λ1 to equal 1 or above, survival of small juveniles would have to increase by 0.61 which is a large change from the existing survial rate of 0.082. Therefore, based on this sensitivity analysis the decline of the loggerhead sea turtle population was due to a decline in small juveniles.
+
+```{r}
+
+# Looking at vital rates
+loggerhead[[2]]
+
+# Write a matric in symbolic form
+A.vr <- expression(
+  0, 0, 0, p4*g4*f, p5*f,
+  p1, p2*(1-g2), 0, 0, 0,
+  0, p2*g2, p3*(1-g3), 0, 0,
+  0, 0, p3*g3, p4*(1-g4), 0,
+  0, 0, 0, p4*g4, p5)
+
+# Create a named list of current parameter values
+vr.vals <- list(
+p1 <- 0.6747, # survival of stage 1 (eggs)
+p2 <- 0.7500, # survival of stage 2 (small juveniles)
+p3 <- 0.6758, # survival of stage 3 (large juveniles)
+p4 <- 0.7425, # survival of stage 4 (subadults)
+p5 <- 0.8091, # survival of stage 5 (adults)
+f <- 76.5, # birth rate of adults
+g1 <- p1, 
+g2 <- 0.04696015/p2, # a2+1,2/p2,  # growth rate of stage 2, probability of surviving to to the next stage
+g3 <- 0.01908247/p3, # a3+1,3/p3,
+g4 <- 0.06094308/p4, # a4+1,4/p4
+g5 = p5
+)
+
+# Calculate the sensitivities and elasticities of λ1 to the vital rates
+vitalsens(A.vr, vr.vals)
+
+```
+
+12. Use vitalsens() to calculate the sensitivities and elasticities of λ1 to the vital rates. Show the results. Which vital rate shows the highest sensitivity? The highest elasticity? Does this make sense? What would increasing these vital rates mean for the population?
+
+13. Using the sensitivity of p1, how much would egg survival need to be increased to raise λ1 from its current value to one? [Note that vitalsens() returns its results as a data frame, so you can save the result and then extract the value using data frame subsetting]
+
+14. Reducing fisheries bycatch would increase p3, p4 and p5. If we are increasing those three survival rates
+equally, then the sum of those three sensitivities would tell you the increase in λ1 resulting from a
+one-unit increase in all three survival terms. Using this information, how much would large juvenile,
+subadult, and adult survivals need to be increased to raise λ1 from its current value to one?
+
+15. What can you conclude based on this analysis?
+
+## Managing fisheries bycatch
+```{r}
+
+
+
+```
+
+*15. Use vitalsens() to calculate the sensitivities and elasticities of λ1 to the vital rates. Show the results. Why are the sensitivities and elasticities of λ1 to the d’s negative?*
+
+*16. The summed elasticities of the d’s tell you the proportional change in λ1 resulting from a 100% decline
+in the bycatch rate. What proportional change in λ1 do you predict would result from a 50% decline in
+bycatch rate? Is this sufficient to create population growth (λ1 > 1)?*
+
+*17. An early experiment with TEDs suggested that they would reduce bycatch by 70%. Based on the
+elasticities, what value of λ1 would that result in?*
+
+As in the Crouse et al. (1987) model, even perfect survival in the egg and hatchling stage would not allow a population increase unless mortality can also be reduced at some later stage. Changes in large juvenile mortality have the greatest effect on the population growth rate. Reasonable increases in reproductive output alone could not lead to a population increase given the current survival schedules. 
+
+## Conclustions
+
+*18. What have you learned and/or found most interesting (about either sea turtles or demographic models)
+from doing this assignment?*
+
+*19. Approximately haw long did you spend on this assignment?* About 8 hours. 
