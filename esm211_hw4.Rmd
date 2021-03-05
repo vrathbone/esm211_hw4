@@ -2,7 +2,8 @@
 title: "Sea Turtle Management"
 author: "Vanessa Rathbone"
 date: "3/3/2021"
-output: 
+output:
+  pdf_document: default
   html_document:
     code_folding: hide
 ---
@@ -35,30 +36,32 @@ make_stage4age_matrix(loggerhead[[2]])
 # Save the matrix
 logger_leslie <- make_stage4age_matrix(loggerhead[[2]])
 
+logger_leslie
+
 ```
 
 *1. Is this a pre-breeding-census model or a post-breeding-census model? How can you tell?*
 
-This is a post-breeding model because after age subadult21 the probability of surviving as an adults and beyond is 0.80910. A pre-breeding model wouldn't necessarily include this stage in their model depending on how we define the age parameter. Added one more survival term to represent the last, indefinite stage is represented. 
+This is a post-breeding model because after the age of 21-year-old subadults the probability of surviving as to an adults and beyond is 0.80910. A pre-breeding model wouldn't necessarily include this stage in their model depending on how the age parameter is defined. The additional adult survival term represent the last, indefinite age stage of the population since it is not known how old sea turtles get.
 
 *2. Subadults have a maternity of zero. Why do some subadults in the model have a non-zero value in the top row of the matrix? What does this represent?*
 
-The non-zero value in the top row of the matrix represents the reproductive rate and are only seen in the subadult21 and adult22 stages. This is likely representing that the last stage of being a subadult may have reproductive capacities as they reach their full reproductive adult stage. This also represents only reproduction which happens in an instant in a year time-scale and therefore, the 56.80125 accounts for reproduction that may occur between the last sub adult age and the adult age. 
+The non-zero value in the top row of the matrix represents the reproductive rate and are only seen in the subadult21 and adult22 stages. These numbers are similar because this model looks at all of the subadult life stages reproductive rates. The 56.80125 represents the last stage of being a subadult when they may have reproductive capacities as they reach their full reproductive adult stage. This also represents only reproduction which happens in an instant in a year time-scale and therefore, the 56.80125 accounts for reproduction that may occur between the last sub adult age and the adult age. 
 
 *3. Why is the transition from 21-year-old subadults to eggs different from the transition from adults to eggs? Why do both differ from the maternity value?*
 
-They differ because the 21-year-old subadults have a lower probability of reproduction than the 22-year-old adults who are at the full reproductive stage. The adult22 value differs from the maternity value because it's only looking at the reproduction in relation to the stages before. When the model runs to infinite adult stages the maternity or reproductive rate grows and becomes 76.5. 
+They differ because the 21-year-old subadults have a lower probability of reproduction than the 22-year-old adults who are at the full reproductive stage. The 22-year-old adults value differs from the 21-year-old subadults maternity value because it's only looking at the reproduction in relation to the stages before. 
 
 ```{r}
 
 # Use the lambda1() function to calculate the asymptotic growth rate of the population
-lambda1(logger_leslie)
+lambda_logger <- lambda1(logger_leslie)
 
 ```
 
 *4.What does this tell you about the status of the population under the conditions before TEDs were implemented?*
 
-The asymptotic growth rate of the population is r round lambda1(logger_leslie),1 or ~0.95. If lambda = 1, the population isn't changing. Because lambda is less than one, the population is in trouble and not in a stable state. 
+Before TEDs were implemented the asymptotic growth rate of the population is r round lambda1(logger_leslie),1 or ~0.95. If lambda = 1, the population isn't changing. Because lambda is less than one, the population is in trouble and not unchanging. 
 
 ```{r}
 
@@ -71,7 +74,7 @@ logger_aas <- make_stage4age_matrix(loggerhead[[2]], approx_method = c("AAS"))
 
 *5. Why does the transition from subadults to eggs have a different value than it did in the Leslie matrix?*
 
-Because this is an approximation that includes asymptotic growth rates, stable stage structures, and sensitivities the value from subadult to eggs has a different value. This model includes the small reproduction value of 4.66 for subadults because the census is only taken once per year and this value accounts for the subadults that will become reproducing adults from one census to the next year's census. 
+The value from subadult to eggs has a different value because the AAS model is an approximation that includes asymptotic growth rates, stable stage structures, and sensitivities. This model results in a small reproduction value of 4.66 for subadults because the census is only taken once per year and this value accounts for the subadults that will become reproducing adults between one census to the next year's census. The subadult category lasts for 6 years, therefore, this fraction is a smaller number of reproducing adults.  
 
 ## Stable stage distribution
 ```{r}
@@ -81,11 +84,10 @@ Because this is an approximation that includes asymptotic growth rates, stable s
 stable_stage(logger_leslie)
 
 # Now look at the stage distribution using the AAS
-stable_stage(logger_aas)
+logger_stable <- stable_stage(logger_aas, collapse = TRUE) %>% 
+  round(4)
 
-stable_stage(logger_aas, collapse = TRUE)
-
-logger_stable <-stable_stage(logger_aas, collapse = TRUE)
+logger_stable
 
 # If you run stable_stage() on the Leslie matrix, you actually get the stable age distribution (try it and see). So what do I mean when I say that the AAS model gives the same stable stage structure as the Leslie matrix. Well, if you were to sum up the elements of the stable age distribution that correspond to “small juvenile”, 2 then you would get the same value as the “small juvenile” component of the stable stage distribution in the AAS model. In a big matrix this summing is tedious; you can automate it using the collapse = TRUE argument to stable_stage(). 
 
@@ -96,7 +98,7 @@ x <- 0.1691892096+0.1333506465+0.1051035995+0.0828399930+0.0652923827+0.05146180
 
 *6. Which stage do you predict to be most abundant?*
 
-Based on the stable stage distribution, the small juveniles or stage 2 will be the most abundant at `r round, xyz or 0.6478 whereas the adult stage only accounts for 0.3% of the total population. 
+Based on the stable stage distribution, the small juveniles or stage 2 will be the most abundant at 0.6478 whereas the adult stage only accounts for about 0.3% of the total population. 
 
 ## Increasing λ1 to greater than 1
 ```{r}
@@ -120,7 +122,7 @@ aas_matrix <- as.data.frame(make_stage4age_matrix(loggerhead[[2]], approx_method
 ## Egg/hatchling survival, lambda > 1 at 1.5 
 aas_matrix$E[2] 
  
-aas_matrix$E[2] <- 1.5 # Change values
+aas_matrix$E[2] <- 0.9 # Change values
 
 # Rerun to see how lambda changes
 lambda1(aas_matrix)
@@ -128,12 +130,10 @@ lambda1(aas_matrix)
 ## Adult survival, lambda > 1 at 0.93
 aas_matrix$A[5]
 
-aas_matrix$A[5] <- 0.93
+aas_matrix$A[5] <- 0.9
 
 # Rerun to see how lambda changes
 lambda1(aas_matrix)
-
-
 
 ```
 
@@ -143,15 +143,15 @@ The 0.6747 represents the egg/hatchling survival. The 0.80910 represents adult s
 
 *8. Increase the matrix element representing egg/hatchling survival, and re-calculate λ1. By how much does it increase? Experiment with different values of this term until you get an asymptotic growth rate of 1 or more. How large does egg survival need to be to achieve this?*
 
-For egg/hatchling survival, λ1 > 1 at 1.5.
+If you increase egg/hatchling survival by 0.23 (from 0.67 to 0.9) λ1 increases by 0.17. After increasing it incrementally, λ1 > 1 at 1.5 for egg/hatchling survival. This is not a feasible biological number as you can't survive 1.5 years in a 1 year time period. 
 
 *9.Put the egg survival back to its original value, increase the matrix element representing adult survival, and re-calculate λ1. By how much does it increase? Experiment with different values of this term until you get an asymptotic growth rate of 1 or more. How large does adult survival need to be to achieve this?*
 
-For adult survival, λ1 > 1 at 0.93.
+If you increase adult survival by 0.1 (from 0.8 to 0.9) λ1 increases by 0.37. After increasing it incrementally, λ1 > 1 at 0.93 for adult survival.
 
 *10. Based on this analysis, which life stage seems the more promising one to target management at? What else do you need to know to reach a final conclusion?*
 
-Based on this analysis, management should target the adult life stage. It only requires an increase from 0.80 to 0.93 for λ1 to be greater than one and therefore stable. Additionally, you might want to know what other stages might require less management to increase λ1 to be greater than one. 
+Based on this analysis, management should target the adult life stage. It only requires an increase from 0.80 to 0.93 for λ1 to be greater than one and therefore unchanging. Additionally, you might want to know what other stages might require less management to increase λ1 to be greater than one. 
 
 ```{r}
 
@@ -165,95 +165,210 @@ sensitivity(logger_aas) %>%
 sensitivity <- sensitivity(logger_aas, zero = TRUE) %>% 
   round(3)
 
+sensitivity
 # Elasticity matrix, measure of proportional change
 elasticity <- elasticity(logger_aas) %>%
   round(3)
 
-```
+elasticity
 
-```{r, include = TRUE}
-
-knitr::kable(sensitivity, format = "html", caption = "Sensitivities") %>%
-  kable_styling(c("condensed", "responsive","bordered"), 
-                full_width = F, 
-                position = "float_left") 
-
-knitr::kable(elasticity, format = "html", caption = "Elasticities") %>% 
-  kable_styling(c("condensed", "responsive","bordered"), 
-                full_width = F, 
-                position = "float_left")
 ```
 
 *11. Use the sensitivity() and elasticity() functions in in the popbio package to calculate the matrix sensitivities and elasticities. Show the results. What can you conclude based on this analysis?*
 
-In the interest of increasing λ1, our biggest response from the sensitivity model is to increase subadult survival, next would be to increase large juvenile survival followed by increasing adult survival. The smallest response would come from increasing reproduction of small juviniles. The proportional change seen in the elasticity matrix shows that increasing survival of adults would have the largest increase of λ1. Because we need to increase λ1 by 0.05 to reach 1, 
+The greatest increase in the asymptotic growth rate is the transition from large juveniles maturing into sub adults, whereas, in the elasticities model the greatest proportional increase in the asymptotic growth rate is with adult survival. Based on this analysis, if my unit of activity is to have an absolute change, the decline in the loggerhead population is from the decline of large juveniles maturing, however in a scenario looking proportional change, the decline in the loggerhead population is in the adult survival stage.  
 
-increase small juvenile survival by 0.05/0.082 = 0.6097561
-increase large juveniles survival by 0.05/1.174 = 0.04258944
-increase subadults survival 0.05/2.889 = 0.01730703
-increase adult survival 0.05/0.769 = 0.06501951
 
-Based on these sensitivity survival rates for λ1 to equal 1 or above, survival of small juveniles would have to increase by 0.61 which is a large change from the existing survial rate of 0.082. Therefore, based on this sensitivity analysis the decline of the loggerhead sea turtle population was due to a decline in small juveniles.
+```{r, include = TRUE}
+
+knitr::kable(sensitivity, format = "html", caption = "Sensitivities") %>%
+  kable_styling(c("condensed","bordered"), 
+                full_width = F, 
+                position = "left")
+
+knitr::kable(elasticity, format = "html", caption = "Elasticities") %>% 
+  kable_styling(c("condensed","bordered"), 
+                full_width = F, 
+                position = "left")
+```
+
 
 ```{r}
 
-# Looking at vital rates
-loggerhead[[2]]
-
-# Write a matric in symbolic form
+# Write a matrix in symbolic form
 A.vr <- expression(
   0, 0, 0, p4*g4*f, p5*f,
   p1, p2*(1-g2), 0, 0, 0,
-  0, p2*g2, p3*(1-g3), 0, 0,
+  0, p2*g2, p3*(1-g3), 0, 0, 
   0, 0, p3*g3, p4*(1-g4), 0,
-  0, 0, 0, p4*g4, p5)
-
+  0, 0, 0, p4*g4, p5
+)
 
 # Create a named list of current parameter values
-# vr.vals <- list(
-# p1 <- 0.6747, # survival of stage 1 (eggs)
-# p2 <- 0.7500, # survival of stage 2 (small juveniles)
-# p3 <- 0.6758, # survival of stage 3 (large juveniles)
-# p4 <- 0.7425, # survival of stage 4 (subadults)
-# p5 <- 0.8091, # survival of stage 5 (adults)
-# f <- 76.5, # birth rate of adults
-# g1 <- p1, 
-# g2 <- 0.04696015/p2, # a2+1,2/p2,  # growth rate of stage 2, probability of surviving to to the next stage
-# g3 <- 0.01908247/p3, # a3+1,3/p3,
-# g4 <- 0.06094308/p4, # a4+1,4/p4
-# g5 = p5
-# )
+vr.vals <- list(
+p1 = 0.6747, # survival of stage 1 (eggs)
+p2 = 0.7500, # survival of stage 2 (small juveniles)
+p3 = 0.6758, # survival of stage 3 (large juveniles)
+p4 = 0.7425, # survival of stage 4 (subadults)
+p5 = 0.8091, # survival of stage 5 (adults)
+f = 76.5, # birth rate of adults
+g1 = 0.6747, #or p1
+g2 = 0.04696015/0.7500, # a3,2/p2,  # growth rate of stage 2, probability of surviving to to the next stage
+g3 = 0.01908247/0.6758, # a3+1,3/p3,
+g4 = 0.06094308/0.7425 # a4+1,4/p4
+)
+
+#p5 is the greatest survival, if you take it from the largest number than you'll get the largest change. 
 
 # Calculate the sensitivities and elasticities of λ1 to the vital rates
-#vitalsens(A.vr, vr.vals)
+vital_sens <- vitalsens(A.vr, vr.vals)
+
+vital_sens
 
 ```
 
 *12. Use vitalsens() to calculate the sensitivities and elasticities of λ1 to the vital rates. Show the results. Which vital rate shows the highest sensitivity? The highest elasticity? Does this make sense? What would increasing these vital rates mean for the population?*
 
-*13. Using the sensitivity of p1, how much would egg survival need to be increased to raise λ1 from its current value to one? [Note that vitalsens() returns its results as a data frame, so you can save the result and then extract the value using data frame subsetting]*
+The stage 3, large juveniles, growth rates (g3) show the highest sensitivity, while the stage 5, adults, survival (p5) show the highest elasticity. If you were to increase g3 by 0.1 (from 0.0282 to 0.0382) then the asymptotic growth rate would increase by about 0.183 (1.8261*0.1). Whereas a 0.1 increase in adult survival (p5) would result in a 3.3% increase in the asymptotic growth rate (λ1_. This makes sense as each of the vital rates have a proportional affect on lambda based on their values. Therefore, adult survival (p5) stage would have the largest proportional affect on λ1. It's important to look at the vital rates, i.e. increasing p5 also increases egg reproduction. 
+
+```{r, include = TRUE}
+
+knitr::kable(vital_sens, format = "html", caption = "Vital Rates") %>% 
+  kable_styling(c("condensed","bordered"), 
+                full_width = F, 
+                position = "center")
+
+```
+
+*13. Using the sensitivity of p1, how much would egg survival need to be increased to raise λ1 from its current value to one?* 
+
+In order for λ1 to be increased from its current value to one, egg survival would need to increase from 0.6747 to 1.2674 (an increase of 0.5927). 
+
+```{r}
+# Using the sensitivity of p1, how much would egg survival have to increase to raise lambda to 1? 
+sens_p1 <- vital_sens[1,2] # Create a vector with only sensitivity of p1 survival
+old_p1 <- vital_sens[1,1] # Create a vector with original p1 survival
+
+lambda_one <- 1 - lambda_logger # Increase original lambda to 1 (~0.048)
+
+value <- lambda_one/sens_p1 # Get the difference between the increase of lambda and the sensitivity of p1
+new_p1 <- value + old_p1 # New p1 is ~1.27
+
+```
 
 *14. Reducing fisheries bycatch would increase p3, p4 and p5. If we are increasing those three survival rates equally, then the sum of those three sensitivities would tell you the increase in λ1 resulting from a one-unit increase in all three survival terms. Using this information, how much would large juvenile, subadult, and adult survivals need to be increased to raise λ1 from its current value to one?*
 
+The sum of p3, p4, and p5 sensitivities are ~0.912. In order to increase λ1 from its current value to one, the sum of these survival rates would need to increase by 0.0531.
+
+```{r}
+
+# Using the sensitivity of p3, p4, and p5, what the increase in lambda would result in a one unit increase of all three surivival terms.
+
+sens_p345 <- vital_sens[3,2] + vital_sens[4,2] + vital_sens[5,2] 
+old_p345 <- vital_sens[3,1] + vital_sens[4,1] + vital_sens[5,1] 
+
+lambda_p345 <- 1 - lambda_logger # Increase original lambda to 1 (~0.088)
+
+value_p345 <- lambda_p345/sens_p345 # Difference bw the increase of lambda and the sensitivity of p345
+new_p345 <- value_p345 + old_p345 # New p1 is ~2.28
+
+increase <- old_p345 - new_p345
+
+```
+
 *15. What can you conclude based on this analysis?*
+
+Based on this analysis, we can conclude that focusing on large juvenile, subadult and adult survival is more efficient than focusing on egg survival. This is because a much smaller increase is needed for these groups (large juveniles, subadults and adults) to get λ1 to one when compared to egg survival. Absolute changes in large juveniles maturing into subadults has the greatest effect on the population growth rates and therefore, must be addressed along with efforts to decline the mortality of reproducing adults. Reproducing adults can not increase the population alone with the current survival rates. In addition, even if egg survival was 100% successful it would not allow for the population to increase to greater than 1 without also reducing the mortality in later stages.
 
 ## Managing fisheries bycatch
 ```{r}
 
+# Bycatch induced death rate = dx (US population from Australian population)
+# Write a matrix in symbolic form
+bycatch <- expression(
+  0, 0, 0, (p4-d4)*g4*f, (p5-d5)*f,
+  p1, p2*(1-g2), 0, 0, 0,
+  0, p2*g2, (p3-d3)*(1-g3), 0, 0, 
+  0, 0, (p3-d3)*g3, (p4-d4)*(1-g4), 0,
+  0, 0, 0, (p4-d4)*g4, (p5-d5)
+)
 
+# Update list of current parameter values
+bycatch_list <- list(
+p1 = 0.6747, # survival of stage 1 (eggs) 
+p2 = 0.7500, # survival of stage 2 (small juveniles)
+p3 = 0.83, # survival of stage 3 (large juveniles)
+p4 = 0.885, # survival of stage 4 (subadults)
+p5 = 0.91, # survival of stage 5 (adults)
+d3 = 0.83 - 0.6758, 
+d4 = 0.885 - 0.7425, 
+d5 = 0.91 - 0.8091,
+f = 76.5, # birth rate of adults
+g1 = 0.6747, # or p1
+g2 = 0.04696015/0.7500, # a3,2/p2, # growth rate of stage 2, probability of surviving to to the next stage
+g3 = 0.01908247/0.83, # a4,3/p3,
+g4 = 0.06094308/0.885 # a5,4/p4
+)
+
+#p5 is the greatest survival, if you take it from the largest number than you'll get the largest change. 
+
+# Calculate the sensitivities and elasticities of λ1 to the vital rates
+vital_sens_bycatch <- vitalsens(bycatch, bycatch_list)
+
+vital_sens_bycatch
 
 ```
 
 *15. Use vitalsens() to calculate the sensitivities and elasticities of λ1 to the vital rates. Show the results. Why are the sensitivities and elasticities of λ1 to the d’s negative?*
 
+The d values are bycatch-induced death rates and the negative results reflect a decline in λ1 rather than an increase. This means that for every increase in bycatch death rates, there will be a negative effect on the asymptotic growth rate (or λ1). 
+
+```{r, include = TRUE}
+
+knitr::kable(vital_sens_bycatch, format = "html", caption = "Vital Rates - Bycatch") %>% 
+  kable_styling(c("condensed","bordered"), 
+                full_width = F, 
+                position = "center")
+
+```
+
 *16. The summed elasticities of the d’s tell you the proportional change in λ1 resulting from a 100% decline in the bycatch rate. What proportional change in λ1 do you predict would result from a 50% decline in bycatch rate? Is this sufficient to create population growth (λ1 > 1)?*
+
+A 100% decline in the bycatch rate, λ1 would increase by a proportional amount of around -.1238 for λ1 to reach one. A 50% decline in bycatch rate would result in proportional increase of around -0.059 for λ1. Because we need to increase λ1 by ~0.048, declining the bycatch rate 50% would be sufficient to create a population growth where λ1 > 1.
+
+```{r}
+# Using the summed elasticities of ds, what is the 50% decline in the bycatch rate's effect on lambda? 
+sum_d_elas <- vital_sens_bycatch[6,3] + vital_sens_bycatch[7,3] + vital_sens_bycatch[8,3]
+
+fifty <- sum_d_elas*0.5
+
+lambda_increase <- fifty*lambda_logger
+```
 
 *17. An early experiment with TEDs suggested that they would reduce bycatch by 70%. Based on the elasticities, what value of λ1 would that result in?*
 
-As in the Crouse et al. (1987) model, even perfect survival in the egg and hatchling stage would not allow a population increase unless mortality can also be reduced at some later stage. Changes in large juvenile mortality have the greatest effect on the population growth rate. Reasonable increases in reproductive output alone could not lead to a population increase given the current survival schedules. 
+A 70% reduction in bycatch would result in a λ1 of 1.034 (0.952+0.082), therefore the population would be unchanging. 
 
-## Conclustions
+```{r}
+
+# Using the summed elasticities of ds, what is the 50% decline in the bycatch rate's effect on lambda? 
+sum_d_elas <- vital_sens_bycatch[6,3] + vital_sens_bycatch[7,3] + vital_sens_bycatch[8,3]
+
+seventy <- sum_d_elas*0.7
+
+lambda_increase_70 <- seventy*lambda_logger
+
+new_lambda_70 <- lambda_logger - lambda_increase_70 
+```
+
+
+## Conclusions
 
 *18. What have you learned and/or found most interesting (about either sea turtles or demographic models) from doing this assignment?*
 
-*19. Approximately haw long did you spend on this assignment?* About 8 hours. 
+- How many eggs are produced by adult females.  
+- That large juveniles being stranded can be seen and reflected in the data.
+- That clearly TEDs will need to be implemented and adopted in order to actually increase the population of loggerhead sea turtle to a level where they are no longer in trouble.
+- Lastly, I learned a lot about how to interpret the sensitivity and elasticity of a species. 
+
+*19. Approximately haw long did you spend on this assignment?* About 12 hours. 
